@@ -1,64 +1,53 @@
 #!/usr/bin/env python3
-"""Shared Space hub generator.
+"""Shared Space hub generator (Pico.css theme).
 Reads project.md manifests -> hub index.html + per-project detail pages.
-Phone-friendly, self-contained, dark/light. Never hand-edit generated HTML.
+Uses the vendored Pico.css kit (assets/pico.min.css) — semantic markup,
+minimal custom CSS. Never hand-edit generated HTML.
 """
 import os, re, glob, html
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(ROOT, "index.html")
+PICO = "assets/pico.min.css"
+PICO_ABS = "/assets/pico.min.css"  # absolute so detail pages in subdirs resolve correctly
 
-STATUS_COLORS = {
-    "active": "#2d9e4f", "ongoing": "#2d9e4f",
-    "parked": "#c99700", "done": "#5f6b7a",
+# TINY custom layer on top of Pico (things a kit doesn't do well)
+CUSTOM_CSS = """
+/* Project tiles: tap targets >= 44px, hover lift */
+a.tile { display: block; }
+a.tile { background: var(--pico-card-background-color); color: inherit;
+  padding: var(--pico-block-spacing-vertical) var(--pico-block-spacing-horizontal);
+  border-radius: var(--pico-border-radius); transition: transform .08s ease, box-shadow .12s ease; }
+a.tile:hover { transform: translateY(-1px); }
+a.tile .arrow { margin-left: auto; opacity: .55; }
+
+/* status pill */
+.pill { display: inline-block; font-size: .72rem; font-weight: 600;
+  padding: 2px 9px; border-radius: 999px; color: #fff; vertical-align: middle; }
+.pill.active  { background: #2f9e69; }
+.pill.ongoing { background: #2f9e69; }
+.pill.parked  { background: #c9a227; }
+.pill.done    { background: #5f6b80; }
+
+/* section headings in a project space */
+.sp h3, .sp h4 { border-bottom: 1px solid var(--pico-muted-border-color); padding-bottom: 4px; }
+li > code, p > code { font-size: .85em; }
+/* bullets inside project bodies that aren't wrapped in a list get spacing */
+.sp ul { margin-bottom: 0; }
+
+/* mobile comfort */
+@media (max-width: 600px) {
+  h1 { font-size: 1.5rem; }
+  a.tile { padding: 12px 14px; margin-bottom: 8px; }
+  article { padding: 16px 12px; }
 }
-
-CSS = """
-:root {{ color-scheme: light dark; }}
-* {{ box-sizing: border-box; margin:0; padding:0; }}
-html {{ scroll-behavior: smooth; }}
-body {{
-  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
-  background:#f6f7f9; color:#1a1a1a; line-height:1.5; max-width:760px;
-  margin:0 auto; padding:20px 18px 60px;
-}}
-h1 {{ font-size:1.4rem; font-weight:700; }}
-h3 {{ font-size:.98rem; font-weight:600; margin:16px 0 4px; }}
-.sub {{ color:#666; font-size:.85rem; margin:6px 0; }}
-.back {{ display:inline-block; margin:0 0 12px; color:#0f7a59; font-size:.85rem;
-  font-weight:600; text-decoration:none; }}
-.tile {{ display:block; text-decoration:none; border:1px solid #d9dce2;
-  border-radius:11px; background:#fff; padding:13px 14px; margin:8px 0; }}
-.tile-top {{ display:flex; align-items:center; gap:10px; }}
-.dot {{ width:10px; height:10px; border-radius:50%; flex:0 0 auto; }}
-.t-name {{ font-weight:600; font-size:1.02rem; flex:1; }}
-.pill {{ font-size:.68rem; background:#e8ecf3; color:#516e9c; border-radius:10px; padding:1px 8px; }}
-.t-arrow {{ color:#888; font-weight:700; }}
-.t-about {{ display:block; color:#555; font-size:.85rem; margin-top:8px; line-height:1.4; }}
-.tag {{ display:inline-block; font-size:.7rem; background:#e4e9f2; color:#4a6a9c;
-  border-radius:9px; padding:1px 8px; margin:0 4px 0 0; }}
-.card {{ border:1px solid #d9dce2; border-radius:11px; background:#fff; padding:16px; margin:8px 0; }}
-.card h3 {{ margin-top:0; }}
-.card h3, .card h4 {{ font-size:.95rem; color:#444; font-weight:600; }}
-.card ul {{ margin:6px 0; padding-left:18px; }}
-.card li {{ font-size:.9rem; margin:3px 0; }}
-.card p {{ font-size:.9rem; margin:6px 0; }}
-.sec {{ margin:14px 0; }}
-.sec h5 {{ font-size:.85rem; font-weight:600; color:#555; margin:0 0 6px;
-  text-transform:uppercase; letter-spacing:.4px; }}
-.empty {{ padding:28px; color:#666; text-align:center; }}
-.foot {{ margin-top:30px; color:#888; font-size:.75rem; text-align:center; }}
-::-webkit-tap-highlight-color {{ transparent; }}
-@media (prefers-color-scheme: dark) {{
-  body {{ background:#14161a; color:#e8e8e8; }}
-  .tile, .card {{ background:#1a1d23; border-color:#2b3038; }}
-  .t-about {{ color:#aab; }} .pill {{ background:#2a3040; color:#8aa4d8; }}
-  .tag {{ background:#2a3040; color:#8aa4d8; }}
-  .card h3, .card h4, .sec h5 {{ color:#aeb4bf; }}
-  .sub {{ color:#a8adb8; }} .foot {{ color:#7d828d; }} .t-arrow {{ color:#8a8f9a; }}
-  .empty {{ color:#9aa0ab; }} .back {{ color:#5fd7a3; }}
-}}
+@media (prefers-reduced-motion: reduce) {
+  a.tile, a.tile * { transition: none; }
+}
 """
+
+def stamp():
+    return __import__("datetime").datetime.now().strftime("%b %d %Y, %I:%M %p")
 
 def parse_manifest(path):
     with open(path) as f:
@@ -76,31 +65,43 @@ def parse_manifest(path):
 def md_to_html(text):
     """Minimal md -> html for manifest body (headings, bullets, bold, code)."""
     out = []
+    in_ul = False
     for line in text.splitlines():
         s = line.rstrip()
         if not s.strip():
+            if in_ul:
+                out.append("</ul>")
+                in_ul = False
             continue
-        s = s.replace("[ ]", "☐").replace("[x]", "☑").replace("[X]", "☑")
+        s = s.replace("[ ]", "<code>☐</code>").replace("[x]", "☑").replace("[X]", "☑")
         s = re.sub(r"`([^`]+)`", r"<code>\1</code>", s)
-        s = re.sub(r"\*\*(.+?)\*\*", r"<b>\1</b>", s)
+        s = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", s)
         st = s.strip()
         if st.startswith("### "):
+            if in_ul: out.append("</ul>"); in_ul = False
             out.append(f"<h4>{html.escape(st[4:])}</h4>")
         elif st.startswith("## "):
-            out.append(f"<h4>{html.escape(st[3:])}</h4>")
+            if in_ul: out.append("</ul>"); in_ul = False
+            out.append(f"<h3>{html.escape(st[3:])}</h3>")
         elif st.startswith("# "):
-            out.append(f"<h4>{html.escape(st[2:])}</h4>")
+            if in_ul: out.append("</ul>"); in_ul = False
+            out.append(f"<h2>{html.escape(st[2:])}</h2>")
         elif st.startswith("- "):
+            if not in_ul:
+                out.append("<ul>"); in_ul = True
             out.append(f"<li>{st[2:]}</li>")
         else:
+            if in_ul: out.append("</ul>"); in_ul = False
             out.append(f"<p>{s}</p>")
+    if in_ul:
+        out.append("</ul>")
     return "\n".join(out)
 
 def about_line(body_text, n=140):
-    """First non-heading, non-list line as the tile's about blurb."""
+    """First non-heading, non-list line as the tile's blurb."""
     for line in body_text.splitlines():
         st = line.strip()
-        if st and not st.startswith(("#", "-", "##")) and not re.match(r"^[A-Z][a-z]+$", st):
+        if st and not st.startswith(("#", "-", "##")) and len(st) > len(st.split()[0]):
             return html.escape(st[:n])
     return ""
 
@@ -109,6 +110,26 @@ def write(path, content):
     with open(tmp, "w") as f:
         f.write(content)
     os.replace(tmp, path)
+
+def head(title):
+    return f"""<!DOCTYPE html>
+<html lang="en" data-theme="auto"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>{html.escape(title)}</title>
+<link rel="stylesheet" href="{PICO_ABS}">
+<style>{CUSTOM_CSS}</style>
+</head><body>
+<main class="container" style="padding-top:1rem">
+"""
+
+def foot():
+    return f"""<div class="footer" style="margin-top:2.5rem;text-align:center;color:var(--pico-muted-color);font-size:.8rem">
+  Shared space · generated {stamp()} · edit project.md and rerun generate.py
+</div>
+</main>
+</body></html>"""
 
 def main():
     manifests = sorted(glob.glob(os.path.join(ROOT, "*", "project.md")))
@@ -128,64 +149,52 @@ def main():
     spaces.sort(key=lambda s: (0 if s["status"] in ("active", "ongoing") else 1,
                                 s["updated"] or ""))
 
-    now = __import__("datetime").datetime.now().strftime("%b %d %Y, %I:%M %p")
-
-    # ---- Hub (tiles linking to detail pages) ----
+    # ---- Hub ----
     if not spaces:
-        tiles = "<div class='empty'><p>No project spaces yet.</p><p>When you tell me something belongs in the shared space, I create a project here.</p></div>"
+        tiles = "<article><p>No project spaces yet.</p><p>When you tell me something belongs in the shared space, I create a project here.</p></article>"
     else:
         tile_html = []
         for s in spaces:
-            sc = STATUS_COLORS.get(s["status"], "#5f6b7a")
-            taghtml = "".join(f"<span class='tag'>{html.escape(t)}</span>" for t in s["tags"])
+            taghtml = "".join(f"<span class='pill' style='background:var(--pico-secondary-background);color:var(--pico-secondary-inverse)'>{html.escape(t)}</span> " for t in s["tags"])
             about = about_line(s["body_text"])
             tile_html.append(f"""
-  <a class="tile" href="/{s['slug']}/">
-    <span class="tile-top">
-      <span class="dot" style="background:{sc}"></span>
-      <span class="t-name">{html.escape(s['name'])}</span>
-      <span class="pill">{html.escape(s['status'])}</span>
-      <span class="t-arrow">›</span>
+  <a class="tile" href="/{s['slug']}/" role="button" style="text-align:left">
+    <span style="display:block;font-size:1.05rem;font-weight:600">{html.escape(s['name'])}
+      <span class="pill {html.escape(s['status'])}" style="margin-left:.4rem">{html.escape(s['status'])}</span>
+      <span class="arrow">›</span>
     </span>
-    <span class="t-about">{about}</span>
-    <span style="display:block;margin-top:6px">{taghtml}<span class="meta" style="color:#888;font-size:.72rem;margin-left:6px">updated {html.escape(s['updated'])}</span></span>
+    <span style="display:block;margin-top:.4rem;color:var(--pico-muted-color);font-size:.9rem">{about}</span>
+    <span style="display:block;margin-top:.4rem;font-size:.72rem">{taghtml}<span class="pill" style="background:var(--pico-muted-border-color);color:var(--pico-muted-color)">updated {html.escape(s['updated'])}</span></span>
   </a>""")
         tiles = "\n".join(tile_html)
 
-    hub = f"""<!DOCTYPE html>
-<html lang="en"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Shared Space · Andrew</title><style>{CSS}</style></head><body>
-<h1>Shared Space</h1>
-<div class="sub">Updated {now} · {len(spaces)} project space(s) · tap one to open it</div>
-<h3>Projects</h3>
+    hub = head("Shared Space · Andrew")
+    hub += f"""<h1 style="margin-bottom:.25rem">Shared Space</h1>
+<p style="color:var(--pico-muted-color);margin-bottom:1.4rem">Updated {stamp()} · {len(spaces)} project(s) · tap one to open it</p>
 {tiles}
-<div class="foot">Shared space · generated from project notes · regenerated automatically · <a href="https://github.com/andrewsouthard/shared-space">repo</a></div>
-</body></html>"""
+"""
+    hub += foot()
     write(OUT, hub)
 
     # ---- Detail pages ----
     for s in spaces:
-        sc = STATUS_COLORS.get(s["status"], "#5f6b7a")
-        taghtml = "".join(f"<span class='tag'>{html.escape(t)}</span>" for t in s["tags"])
-        detail = f"""<!DOCTYPE html>
-<html lang="en"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{html.escape(s['name'])} · Shared Space</title><style>{CSS}</style></head><body>
-<a class="back" href="/">← All projects</a>
-<div class="card">
-  <h1 style="font-size:1.25rem">{html.escape(s['name'])}
-    <span class="dot" style="background:{sc};display:inline-block;width:12px;height:12px;border-radius:50%"></span>
+        taghtml = "".join(f"<span class='pill' style='background:var(--pico-secondary-background);color:var(--pico-secondary-inverse)'>{html.escape(t)}</span> " for t in s["tags"])
+        detail = head(f"{s['name']} · Shared Space")
+        detail += f"""<p><a href="/">&larr; All projects</a></p>
+<article class="sp" style="margin-top:.4rem">
+  <h1 style="font-size:1.35rem;margin-bottom:.15rem">{html.escape(s['name'])}
+    <span class="pill {html.escape(s['status'])}" style="margin-left:.4rem;font-size:.78rem">{html.escape(s['status'])}</span>
   </h1>
-  <div style="margin-top:6px">{taghtml}<span class="sub" style="color:#888;font-size:.75rem">· updated {html.escape(s['updated'])} · status {html.escape(s['status'])}</span></div>
-</div>
+  <p style="margin:0;color:var(--pico-muted-color);font-size:.82rem">
+    {taghtml} <span>updated {html.escape(s['updated'])}</span>
+  </p>
+</article>
 {s['body']}
-<div class="foot">Part of Andrew's shared space · edit ~/repos/shared-space/{s['slug']}/project.md and rerun generate.py</div>
-</body></html>"""
-        dpath = os.path.join(ROOT, s["slug"], "index.html")
-        write(dpath, detail)
+"""
+        detail += foot()
+        write(os.path.join(ROOT, s["slug"], "index.html"), detail)
 
-    print(f"Wrote hub ({len(spaces)} tiles) + {len(spaces)} detail page(s)")
+    print(f"Wrote hub ({len(spaces)} tiles) + {len(spaces)} detail page(s) using {PICO}")
 
 if __name__ == "__main__":
     main()
