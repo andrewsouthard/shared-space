@@ -15,8 +15,9 @@ file into project spaces. A phone-friendly page served over HTTP on the Pi.
 
 ## Where things live
 - Hub URL: http://192.168.1.64:8800/
-- Source of truth: `~/shared-space/<slug>/project.md` per project
-- Generator: `~/shared-space/generate.py`
+- Repo: `~/repos/shared-space` (GitHub: andrewsouthard/shared-space)
+- Source of truth: `~/repos/shared-space/<project>/project.md` per project
+- Generator: `~/repos/shared-space/generate.py`
 - Skill: `project-spaces` (the "when to create a space" heuristic)
 - Server: systemd user service `conv-dashboard.service` (port 8800, ufw LAN-only)
 - Digest: cron `conv-daily-digest.py` (daily 08:00, posts recap to Discord)

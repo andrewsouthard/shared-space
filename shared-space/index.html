@@ -6,66 +6,61 @@
 <title>Shared Space · Shared Space</title>
 <link rel="stylesheet" href="/assets/pico.min.css">
 <style>
-/* Project tiles: tap targets >= 44px, hover lift */
+/* Project title tile on the hub */
 a.tile { display: block; }
-a.tile { background: var(--pico-card-background-color); color: inherit;
+a.tile { background: var(--pico-card-background-color);
   padding: var(--pico-block-spacing-vertical) var(--pico-block-spacing-horizontal);
-  border-radius: var(--pico-border-radius); transition: transform .08s ease, box-shadow .12s ease; }
-a.tile:hover { transform: translateY(-1px); }
-a.tile .arrow { margin-left: auto; opacity: .55; }
+  border-radius: var(--pico-border-radius);
+  transition: transform .08s ease, box-shadow .12s ease; }
+a.tile:active { transform: scale(.99); }
+a.tile .title { font-size: 1.05rem; font-weight: 600; }
+a.tile .title .arrow { margin-left: auto; opacity: .5; }
+a.tile .about { display: block; margin-top: .35rem;
+  color: var(--pico-muted-color); font-size: .88rem; }
+a.tile .row { display: block; margin-top: .5rem; }
 
-/* status pill */
+/* Status pill */
 .pill { display: inline-block; font-size: .72rem; font-weight: 600;
   padding: 2px 9px; border-radius: 999px; color: #fff; vertical-align: middle; }
 .pill.active  { background: #2f9e69; }
 .pill.ongoing { background: #2f9e69; }
 .pill.parked  { background: #c9a227; }
-.pill.done    { background: #5f6b80; }
+.pill.done    { background: #6c7686; }
 
-/* section headings in a project space */
-.sp h3, .sp h4 { border-bottom: 1px solid var(--pico-muted-border-color); padding-bottom: 4px; }
-li > code, p > code { font-size: .85em; }
-/* bullets inside project bodies that aren't wrapped in a list get spacing */
-.sp ul { margin-bottom: 0; }
-
-/* mobile comfort */
-@media (max-width: 600px) {
-  h1 { font-size: 1.5rem; }
-  a.tile { padding: 12px 14px; margin-bottom: 8px; }
-  article { padding: 16px 12px; }
-}
-@media (prefers-reduced-motion: reduce) {
-  a.tile, a.tile * { transition: none; }
-}
+/* Tags use a muted, non-accent pill */
+.tag { display: inline-block; font-size: .7rem; font-weight: 600;
+  padding: 1px 8px; border-radius: 999px; vertical-align: middle;
+  background: var(--pico-secondary-background);
+  color: var(--pico-secondary-inverse); }
 </style>
 </head><body>
-<main class="container" style="padding-top:1rem">
+<main class="container">
 <p><a href="/">&larr; All projects</a></p>
-<article class="sp" style="margin-top:.4rem">
-  <h1 style="font-size:1.35rem;margin-bottom:.15rem">Shared Space
+<article>
+  <h1 style="margin:.25rem 0 .1rem">Shared Space
     <span class="pill active" style="margin-left:.4rem;font-size:.78rem">active</span>
   </h1>
-  <p style="margin:0;color:var(--pico-muted-color);font-size:.82rem">
-    <span class='pill' style='background:var(--pico-secondary-background);color:var(--pico-secondary-inverse)'>[shared-space</span> <span class='pill' style='background:var(--pico-secondary-background);color:var(--pico-secondary-inverse)'>browse</span> <span class='pill' style='background:var(--pico-secondary-background);color:var(--pico-secondary-inverse)'>hub</span> <span class='pill' style='background:var(--pico-secondary-background);color:var(--pico-secondary-inverse)'>projects]</span>  <span>updated 2026-10-22</span>
+  <p style="margin:0;color:var(--pico-muted-color);font-size:.85rem">
+    <span class='tag'>[shared-space</span> <span class='tag'>browse</span> <span class='tag'>hub</span> <span class='tag'>projects]</span> <span style="margin-left:.35rem">updated 2026-10-22</span>
   </p>
 </article>
-<h2>Shared Space</h2>
 <h3>What it is</h3>
-<p>The browsable project hub Andrew uses so conversations and assets don't get</p>
+<p>The browsable project hub Andrew uses so conversations and assets don&#x27;t get</p>
 <p>buried in chat threads. The unit is the project, not the conversation — chats</p>
 <p>file into project spaces. A phone-friendly page served over HTTP on the Pi.</p>
 <h3>Where things live</h3>
 <ul>
 <li>Hub URL: http://192.168.1.64:8800/</li>
-<li>Source of truth: <code>~/shared-space/<slug>/project.md</code> per project</li>
-<li>Generator: <code>~/shared-space/generate.py</code></li>
-<li>Skill: <code>project-spaces</code> (the "when to create a space" heuristic)</li>
+<li>Repo: <code>~/repos/shared-space</code> (GitHub: andrewsouthard/shared-space)</li>
+<li>Source of truth: <code>~/repos/shared-space/&lt;project&gt;/project.md</code> per project</li>
+<li>Generator: <code>~/repos/shared-space/generate.py</code></li>
+<li>Skill: <code>project-spaces</code> (the &quot;when to create a space&quot; heuristic)</li>
 <li>Server: systemd user service <code>conv-dashboard.service</code> (port 8800, ufw LAN-only)</li>
 <li>Digest: cron <code>conv-daily-digest.py</code> (daily 08:00, posts recap to Discord)</li>
 </ul>
 <h3>Conversations</h3>
 <ul>
-<li>2026-10-22 — Andrew: "I struggle using you... no way to easily visualize and keep track of conversations." Initial build was a timeline; Andrew clarified the real need is a browsable <strong>project hub</strong>, not a search/timeline. Refocused build around project spaces + a tinkerable skill.</li>
+<li>2026-10-22 — Andrew: &quot;I struggle using you... no way to easily visualize and keep track of conversations.&quot; Initial build was a timeline; Andrew clarified the real need is a browsable <strong>project hub</strong>, not a search/timeline. Refocused build around project spaces + a tinkerable skill.</li>
 </ul>
 <h3>Decisions</h3>
 <ul>
@@ -76,7 +71,7 @@ li > code, p > code { font-size: .85em; }
 </ul>
 <h3>Open threads</h3>
 <ul>
-<li><code>☐</code> Confirm hub renders/loads on Andrew's phone now that ufw allows port 8800</li>
+<li><code>☐</code> Confirm hub renders/loads on Andrew&#x27;s phone now that ufw allows port 8800</li>
 <li><code>☐</code> Possibly expose outward via Cloudflare (Andrew to decide if he wants away-from-home access)</li>
 </ul>
 <h3>Log</h3>
@@ -84,7 +79,7 @@ li > code, p > code { font-size: .85em; }
 <li>2026-10-22 — Built skill <code>project-spaces</code>, hub generator, repointed systemd service + ufw rule to serve shared-space on 8800.</li>
 </ul>
 <div class="footer" style="margin-top:2.5rem;text-align:center;color:var(--pico-muted-color);font-size:.8rem">
-  Shared space · generated Oct 22 2026, 03:18 PM · edit project.md and rerun generate.py
+  Shared space · generated Oct 22 2026, 03:22 PM · <a href="https://github.com/andrewsouthard/shared-space">repo</a>
 </div>
 </main>
 </body></html>
