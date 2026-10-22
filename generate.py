@@ -180,7 +180,7 @@ def main():
   <div style="margin-top:6px">{taghtml}<span class="sub" style="color:#888;font-size:.75rem">· updated {html.escape(s['updated'])} · status {html.escape(s['status'])}</span></div>
 </div>
 {s['body']}
-<div class="foot">Part of Andrew's shared space · edit ~/shared-space/{s['slug']}/project.md and rerun generate.py</div>
+<div class="foot">Part of Andrew's shared space · edit ~/repos/shared-space/{s['slug']}/project.md and rerun generate.py</div>
 </body></html>"""
         dpath = os.path.join(ROOT, s["slug"], "index.html")
         write(dpath, detail)
